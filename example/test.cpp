@@ -11,18 +11,43 @@
  * @copyright Copyright (c) 2020 Particle Industries, Inc.  All rights reserved.
  */
 
-#include <mcp_can.h>
-#include <SPI.h>
+#include "Particle.h"
+#include "mcp_can.h"
 
-#define APP_CONFIG_UNUSED (-1)
-#define CAN_CS_PIN A3
-#define CAN_INT_PIN A1
-#define CAN_RST_PIN A2
-#define BOOST_EN_PIN D6
-#define CAN_INT_PIN A1
-#define CAN_SPEED CAN_250KBPS
-#define CAN_CLOCK MCP_20MHZ
-#define CAN_STBY_PIN APP_CONFIG_UNUSED
+SYSTEM_THREAD(ENABLED);
+SYSTEM_MODE(SEMI_AUTOMATIC);
+
+#if PLATFORM_ID == PLATFORM_TRACKER
+
+#ifndef MCP2515_NORMAL_WRITES
+#error "MCP2515_NORMAL_WRITES must be defined for the tracker platform!"
+#endif // MCP2515_NORMAL_WRITES
+
+#define CAN_SPI_INTERFACE         (SPI1)
+#define APP_CONFIG_UNUSED         (-1)
+#define CAN_CS_PIN                (CAN_CS)
+#define CAN_INT_PIN               (CAN_INT)
+#define CAN_RST_PIN               (CAN_RST)
+#define BOOST_EN_PIN              (CAN_PWR)
+#define CAN_SPEED                 (CAN_500KBPS)
+#define CAN_CLOCK                 (MCP_20MHZ)
+#define CAN_STBY_PIN              (CAN_STBY)
+
+#else // !PLATFORM_TRACKER
+
+#define CAN_SPI_INTERFACE         (SPI)
+#define APP_CONFIG_UNUSED         (-1)
+#define CAN_CS_PIN                (A3)
+#define CAN_INT_PIN               (A1)
+#define CAN_RST_PIN               (A2)
+#define BOOST_EN_PIN              (D6)
+#define CAN_SPEED                 (CAN_250KBPS)
+#define CAN_CLOCK                 (MCP_20MHZ)
+#define CAN_STBY_PIN              (APP_CONFIG_UNUSED)
+
+#endif // PLATFORM_ID
+
+SerialLogHandler logHandler(115200, LOG_LEVEL_INFO);
 
 const char SLEEP_CMD[] = "SLEEP";
 
@@ -36,7 +61,7 @@ uint16_t pin_int;
 app_msg_log_t msg;
 bool is_sleep = false;
 
-MCP_CAN CAN(CAN_CS_PIN);                                    // Set CS pin
+MCP_CAN CAN(CAN_CS_PIN, CAN_SPI_INTERFACE); // Set CS pin
 
 void can_boost_enable(bool enable)
 {
@@ -62,16 +87,16 @@ bool can_init(uint8_t cs_pin, uint8_t int_pin, uint8_t speed, uint8_t clock)
 
     if (CAN.begin(MCP_RX_ANY, speed, clock) != CAN_OK)
     {
-        Serial.printf("CAN initial failed");
+        Log.error("CAN initial failed");
         return false;
     }
 
     // Set NORMAL mode
     if(CAN.setMode(MODE_NORMAL) == MCP2515_OK) {
-        Serial.printf("CAN mode set");
+        Log.info("CAN mode set");
     }
     else {
-      Serial.printf("CAN mode fail");
+      Log.error("CAN mode fail");
       return false;
     }
 
@@ -110,13 +135,13 @@ bool can_sleep(uint32_t timeout_ms)
 
 void setup()
 {
-    Serial.begin(9600);
+    waitUntil(Serial.isConnected);
 
     if(can_init(CAN_CS_PIN, CAN_INT_PIN, CAN_SPEED, CAN_CLOCK)) {
-        Serial.printf("CAN BUS Shield init ok!");
+        Log.info("CAN BUS Shield init ok!");
     }
     else {
-        Serial.printf("CAN BUS Shield init failed. Stop program!");
+        Log.error("CAN BUS Shield init failed. Stop program!");
         delay(1000);
         while (1);
     }
@@ -139,10 +164,10 @@ void loop()
             }
         }
         if(CAN.sendMsgBuf(0x00, 0, 8, stmp) == CAN_OK) {
-            Serial.printf("Sent CAN message\r\n");
+            Log.info("Sent CAN message");
         }
         else {
-            Serial.printf("Failed CAN message\r\n");
+            Log.error("Failed CAN message");
         }
         delay(1000);                       // send data per 100ms
 
@@ -151,17 +176,18 @@ void loop()
             if (ret == CAN_OK) {
                 if(strncmp((char*)msg.data, SLEEP_CMD, strlen(SLEEP_CMD)) == 0) {
                     if(can_sleep(1000)) {
-                        Serial.printf("CAN module put to sleep\r\n");
+                        Log.info("CAN module put to sleep");
                         is_sleep = true;
                     }
                 }
                 else {
-                    Serial.printf("Can Msg Received: ");
+                    auto recv_msg = String("Can Msg Received: ");
                     for(int i = 0; i < msg.len; i++) {
-                        Serial.printf("%X ", msg.data[i]);
+                        recv_msg += String::format("%X ", msg.data[i]);
                     }
+
+                    Log.info(recv_msg);
                 }
-                Serial.printf("\r\n");
             }
         }
     }

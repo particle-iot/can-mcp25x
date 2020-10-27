@@ -3,6 +3,57 @@ Particle driver library to support Microchip MCP2515 and MCP25625 CAN controller
 
 This code is based on the Seeed-Studio CAN bus shield repository (https://github.com/Seeed-Studio/CAN_BUS_Shield) written by Loovee (loovee@seeed.cc).
 
+## Further Reading
+For instructions on using this library on the Tracker platforms see [AN017 Tracker CAN](https://github.com/particle-iot/app-notes/tree/master/AN017-Tracker-CAN).
+
+## Examples Application Build Instructions
+On platforms such as the tracker that use external IO expanders and other circuits for GPIO access to the CAN device, normal write accesses with the `digitalWrite` interface must be employed instead of the faster version `digitalWriteFast` for direct MCU IO.  For this reason `MCP2515_NORMAL_WRITES` must be specified to the precompiler to use normal `digitalWrite`.
+
+There are two ways to accomplish this:
+1. Add a compile define to your Workbench settings file that will add `MCP2515_NORMAL_WRITES` automatically to all source compiled.
+2. Create a local makefile in the `src/` directory to add the define.
+
+### Workbench Settings
+1. Open `.vscode/settings.json` file in Workbench.
+2. Add this line to the top of the settings.  Don't forget the comma at the end. `"particle.compileDefines": ["MCP2515_NORMAL_WRITES"],`
+3. Save the settings file.
+4. Clean your application so that the define is applied to all files by pressing <CTRL-SHIFT-P> and select "Particle: Clean application (local)".
+5. Compile your application.
+
+Your settings.json file should look similar to this.
+```json
+{
+    "particle.compileDefines": ["MCP2515_NORMAL_WRITES"],
+    "extensions.ignoreRecommendations": true,
+    "C_Cpp.default.configurationProvider": "particle.particle-vscode-core",
+    "cortex-debug.openocdPath": "${command:particle.getDebuggerOpenocdPath}",
+    "files.associations": {
+        "*.ino": "cpp"
+    },
+    "particle.firmwareVersion": "2.0.0-rc.3"
+}
+```
+
+### Local Makefile
+1. Copy and paste the following make file text into a file named `build.mk` in your `src/` directory.
+2. Clean your application.
+3. Compile your application.
+
+```make
+INCLUDE_DIRS += $(SOURCE_PATH)/$(USRSRC)  # add user sources to include path
+# add C and CPP files - if USRSRC is not empty, then add a slash
+CPPSRC += $(call target_files,$(USRSRC_SLASH),*.cpp)
+CSRC += $(call target_files,$(USRSRC_SLASH),*.c)
+
+APPSOURCES=$(call target_files,$(USRSRC_SLASH),*.cpp)
+APPSOURCES+=$(call target_files,$(USRSRC_SLASH),*.c)
+ifeq ($(strip $(APPSOURCES)),)
+$(error "No sources found in $(SOURCE_PATH)/$(USRSRC)")
+endif
+
+CPPFLAGS+=-DMCP2515_NORMAL_WRITES
+```
+
 ---
 
 ### LICENSE
