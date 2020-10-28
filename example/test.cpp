@@ -19,10 +19,6 @@ SYSTEM_MODE(SEMI_AUTOMATIC);
 
 #if PLATFORM_ID == PLATFORM_TRACKER
 
-#ifndef MCP2515_NORMAL_WRITES
-#error "MCP2515_NORMAL_WRITES must be defined for the tracker platform!"
-#endif // MCP2515_NORMAL_WRITES
-
 #define CAN_SPI_INTERFACE         (SPI1)
 #define APP_CONFIG_UNUSED         (-1)
 #define CAN_CS_PIN                (CAN_CS)

@@ -52,6 +52,8 @@
 #define spi_write(spi_val) spi_readwrite(spi_val)
 #define SPI_BEGIN()        spi.beginTransaction(spi_settings)
 #define SPI_END()          spi.endTransaction()
+#define MCP2515_SELECT()   csSetter(SPICS, LOW)
+#define MCP2515_UNSELECT() csSetter(SPICS, HIGH)
 
 #if CAN_DEBUG_MODE
     static  Logger local_log("mcp_can");
@@ -175,6 +177,26 @@ void MCP_CAN::mcp2515_reset(void)
     MCP2515_UNSELECT();
     SPI_END();
     delayMicroseconds(10);
+}
+
+/*********************************************************************************************************
+** Function name:           mcp2515_isFastSupported
+** Descriptions:            get fast IO capabilities
+*********************************************************************************************************/
+bool MCP_CAN::mcp2515_isFastSupported(pin_t _pin)
+{
+#if HAL_PLATFORM_IO_EXTENSION
+    // Determine fast mode capability based on IO configuration.  Only the MCU supports fast reads and writes
+    if (_pin >= TOTAL_PINS)
+    {
+        return false;
+    }
+    Hal_Pin_Type type = HAL_Pin_Map()[_pin].type;
+    return (type == HAL_PIN_TYPE_MCU);
+#else
+    // Everthing IO is based from the MCU
+    return true;
+#endif
 }
 
 /*********************************************************************************************************
@@ -961,6 +983,14 @@ MCP_CAN::MCP_CAN(byte _CS, SPIClass &spi, int speed) :
     SPICS(_CS), spi(spi), spi_settings(speed*MHZ, MSBFIRST, SPI_MODE0)
 {
     pinMode(SPICS, OUTPUT);
+    if (mcp2515_isFastSupported((pin_t)_CS))
+    {
+        csSetter = digitalWriteFast;
+    }
+    else
+    {
+        csSetter = digitalWrite;
+    }
     digitalWrite(SPICS, HIGH);
     // MCP2515_UNSELECT();
 }

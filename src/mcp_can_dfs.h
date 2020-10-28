@@ -452,15 +452,6 @@
 #define MCP_RXBUF_0 (MCP_RXB0SIDH)
 #define MCP_RXBUF_1 (MCP_RXB1SIDH)
 
-// Default to fast digital writes unless specified
-#ifdef MCP2515_NORMAL_WRITES
-#define MCP2515_SELECT()   digitalWrite(SPICS, LOW)
-#define MCP2515_UNSELECT() digitalWrite(SPICS, HIGH)
-#else
-#define MCP2515_SELECT()   digitalWriteFast(SPICS, LOW)
-#define MCP2515_UNSELECT() digitalWriteFast(SPICS, HIGH)
-#endif // MCP2515_NORMAL_WRITES
-
 #define MCP2515_OK         (0)
 #define MCP2515_FAIL       (1)
 #define MCP_ALLTXBUSY      (2)
