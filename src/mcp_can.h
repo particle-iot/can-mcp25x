@@ -51,6 +51,8 @@
 
 #define MAX_CHAR_IN_MESSAGE (CAN_MAX_CHAR_IN_MESSAGE)
 
+using spiCsSetter = void(uint16_t, uint8_t);
+
 class MCP_CAN {
   private:
 
@@ -59,6 +61,7 @@ class MCP_CAN {
     unsigned long  can_id;                  // can id
     byte   rtr;                             // rtr
     byte   SPICS;
+    spiCsSetter* csSetter;
     byte   nReservedTx = 0;                     // Count of tx buffers for reserved send
     byte   mcpMode;                         // Current controller mode
 
@@ -71,6 +74,8 @@ class MCP_CAN {
   private:
 
     void mcp2515_reset(void);                                   // reset mcp2515
+
+    bool mcp2515_isFastSupported(pin_t _pin);                   // get fast IO capabilities
 
     byte mcp2515_readRegister(const byte address);              // read mcp2515's register
 
