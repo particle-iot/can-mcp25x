@@ -92,7 +92,7 @@ bool can_init(uint8_t cs_pin, uint8_t int_pin, uint8_t speed, uint8_t clock)
     }
 
     // Set NORMAL mode
-    if(CAN.setMode(MODE_NORMAL) == MCP2515_OK) {
+    if(CAN.setMode(MCP_MODE_NORMAL) == MCP2515_OK) {
         Log.info("CAN mode set");
     }
     else {
@@ -119,18 +119,18 @@ bool can_sleep(uint32_t timeout_ms)
 
     while(1) {
         // Set sleep mode
-        CAN.setMode(MODE_SLEEP);
+        CAN.setMode(MCP_MODE_SLEEP);
 
         // check CAN Operation Mode
         op_mode = CAN.getCANStatus() & 0xE0;
 
-        if((op_mode == MODE_SLEEP) || (try_time >= timeout_ms)) {
+        if((op_mode == MCP_MODE_SLEEP) || (try_time >= timeout_ms)) {
             break;
         }
         try_time += 10;
         delay(10);
     }
-    return (op_mode == MODE_SLEEP);
+    return (op_mode == MCP_MODE_SLEEP);
 }
 
 void setup()

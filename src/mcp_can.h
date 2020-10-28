@@ -49,7 +49,7 @@
 
 #include "mcp_can_dfs.h"
 
-#define MAX_CHAR_IN_MESSAGE 8
+#define MAX_CHAR_IN_MESSAGE (CAN_MAX_CHAR_IN_MESSAGE)
 
 class MCP_CAN {
   private:
