@@ -298,8 +298,8 @@ void MCP_CAN::setSleepWakeup(const byte enable) {
 ** Descriptions:            Put mcp2515 in sleep mode to save power
 *********************************************************************************************************/
 byte MCP_CAN::sleep() {
-    if (getMode() != MODE_SLEEP) {
-        return mcp2515_setCANCTRL_Mode(MODE_SLEEP);
+    if (getMode() != MCP_MODE_SLEEP) {
+        return mcp2515_setCANCTRL_Mode(MCP_MODE_SLEEP);
     } else {
         return CAN_OK;
     }
@@ -324,7 +324,7 @@ byte MCP_CAN::wake() {
 *********************************************************************************************************/
 byte MCP_CAN::setMode(const byte opMode) {
     if (opMode !=
-            MODE_SLEEP) { // if going to sleep, the value stored in opMode is not changed so that we can return to it later
+            MCP_MODE_SLEEP) { // if going to sleep, the value stored in opMode is not changed so that we can return to it later
         mcpMode = opMode;
     }
     return mcp2515_setCANCTRL_Mode(opMode);
@@ -345,7 +345,7 @@ byte MCP_CAN::getCANStatus()
 ** Descriptions:            Returns current control mode
 *********************************************************************************************************/
 byte MCP_CAN::getMode() {
-    return mcp2515_readRegister(MCP_CANSTAT) & MODE_MASK;
+    return mcp2515_readRegister(MCP_CANSTAT) & MCP_MODE_MASK;
 }
 
 /*********************************************************************************************************
@@ -356,7 +356,7 @@ byte MCP_CAN::mcp2515_setCANCTRL_Mode(const byte newmode) {
     // If the chip is asleep and we want to change mode then a manual wake needs to be done
     // This is done by setting the wake up interrupt flag
     // This undocumented trick was found at https://github.com/mkleemann/can/blob/master/can_sleep_mcp2515.c
-    if ((getMode()) == MODE_SLEEP && newmode != MODE_SLEEP) {
+    if ((getMode()) == MCP_MODE_SLEEP && newmode != MCP_MODE_SLEEP) {
         // Make sure wake interrupt is enabled
         byte wakeIntEnabled = (mcp2515_readRegister(MCP_CANINTE) & MCP_WAKIF);
         if (!wakeIntEnabled) {
@@ -372,7 +372,7 @@ byte MCP_CAN::mcp2515_setCANCTRL_Mode(const byte newmode) {
         // as it's put to sleep, but it will stay in SLEEP mode instead of automatically switching to LISTENONLY mode.
         // In this situation the mode needs to be manually set to LISTENONLY.
 
-        if (mcp2515_requestNewMode(MODE_LISTENONLY) != MCP2515_OK) {
+        if (mcp2515_requestNewMode(MCP_MODE_LISTENONLY) != MCP2515_OK) {
             return MCP2515_FAIL;
         }
 
@@ -399,10 +399,10 @@ byte MCP_CAN::mcp2515_requestNewMode(const byte newmode) {
     while (1) {
         // Request new mode
         // This is inside the loop as sometimes requesting the new mode once doesn't work (usually when attempting to sleep)
-        mcp2515_modifyRegister(MCP_CANCTRL, MODE_MASK, newmode);
+        mcp2515_modifyRegister(MCP_CANCTRL, MCP_MODE_MASK, newmode);
 
         byte statReg = mcp2515_readRegister(MCP_CANSTAT);
-        if ((statReg & MODE_MASK) == newmode) { // We're now in the new mode
+        if ((statReg & MCP_MODE_MASK) == newmode) { // We're now in the new mode
             return MCP2515_OK;
         } else if ((millis() - startTime) > 200) { // Wait no more than 200ms for the operation to complete
             return MCP2515_FAIL;
@@ -723,7 +723,7 @@ byte MCP_CAN::mcp2515_init(const byte mode, const byte canSpeed, const byte cloc
 
     mcp2515_reset();
 
-    res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
+    res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
     if (res > 0) {
         LOGI("Entering Configuration Mode Failure...");
         return res;
@@ -765,7 +765,7 @@ byte MCP_CAN::mcp2515_init(const byte mode, const byte canSpeed, const byte cloc
         }
 
         // enter normal mode
-        res = setMode(MODE_NORMAL);
+        res = setMode(MCP_MODE_NORMAL);
         if (res) {
             LOGI("Returning to Previous Mode Failure...");
             return res;
@@ -999,7 +999,7 @@ void MCP_CAN::enableTxInterrupt(bool enable) {
 byte MCP_CAN::init_Mask(byte num, byte ext, unsigned long ulData) {
     byte res = MCP2515_OK;
     LOGI("Starting to Set Mask!");
-    res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
+    res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
     if (res > 0) {
         LOGI("Entering Configuration Mode Failure...");
         return res;
@@ -1031,7 +1031,7 @@ byte MCP_CAN::init_Filt(byte num, byte ext, unsigned long ulData) {
     byte res = MCP2515_OK;
 
     LOGI("Starting to Set Filter!");
-    res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
+    res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
     if (res > 0) {
         LOGI("Enter Configuration Mode Failure...");
         return res;
@@ -1380,7 +1380,7 @@ bool MCP_CAN::mcpPinMode(const byte pin, const byte mode) {
             return true;
             break;
         case MCP_TX0RTS:
-            res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
+            res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
             if (res > 0) {
                 LOGI("Entering Configuration Mode Failure...");
                 delay(10);
@@ -1406,7 +1406,7 @@ bool MCP_CAN::mcpPinMode(const byte pin, const byte mode) {
             return ret;
             break;
         case MCP_TX1RTS:
-            res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
+            res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
             if (res > 0) {
                 LOGI("Entering Configuration Mode Failure...");
                 delay(10);
@@ -1432,7 +1432,7 @@ bool MCP_CAN::mcpPinMode(const byte pin, const byte mode) {
             return ret;
             break;
         case MCP_TX2RTS:
-            res = mcp2515_setCANCTRL_Mode(MODE_CONFIG);
+            res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
             if (res > 0) {
                 LOGI("Entering Configuration Mode Failure...");
                 delay(10);
