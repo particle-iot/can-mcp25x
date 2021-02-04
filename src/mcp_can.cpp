@@ -1000,7 +1000,7 @@ MCP_CAN::MCP_CAN(byte _CS, SPIClass &spi, int speed) :
 ** Descriptions:            init can and set speed
 *********************************************************************************************************/
 byte MCP_CAN::begin(byte mode, byte speedset, const byte clockset) {
-    spi.begin();
+    spi.begin(PIN_INVALID);
     byte res = mcp2515_init(mode, speedset, clockset);
 
     return ((res == MCP2515_OK) ? CAN_OK : CAN_FAILINIT);
