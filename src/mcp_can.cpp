@@ -1007,6 +1007,34 @@ byte MCP_CAN::begin(byte mode, byte speedset, const byte clockset) {
 }
 
 /*********************************************************************************************************
+** Function name:           minimalInit
+** Descriptions:            minimal init
+*********************************************************************************************************/
+byte MCP_CAN::minimalInit() {
+    spi.begin(PIN_INVALID);
+
+    mcp2515_reset();
+
+    byte res = mcp2515_setCANCTRL_Mode(MCP_MODE_CONFIG);
+    if (res > 0) {
+        LOGI("Entering Configuration Mode Failure...");
+        return res;
+    }
+    LOGI("Entering Configuration Mode Successful!");
+
+    if (res == MCP2515_OK) {
+        // enter normal mode
+        res = setMode(MCP_MODE_SLEEP);
+        if (res) {
+            LOGI("Returning to Previous Mode Failure...");
+            return res;
+        }
+    }
+
+    return ((res == MCP2515_OK) ? CAN_OK : CAN_FAILINIT);
+}
+
+/*********************************************************************************************************
 ** Function name:           enableTxInterrupt
 ** Descriptions:            enable interrupt for all tx buffers
 *********************************************************************************************************/

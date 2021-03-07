@@ -134,6 +134,7 @@ class MCP_CAN {
     }
 
     byte begin(byte mode, byte speedset, const byte clockset = MCP_16MHz); // init can
+    byte minimalInit(); // minimal init
     byte init_Mask(byte num, byte ext, unsigned long ulData);       // init Masks
     byte init_Filt(byte num, byte ext, unsigned long ulData);       // init filters
     void setSleepWakeup(byte
