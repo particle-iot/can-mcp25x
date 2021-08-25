@@ -739,7 +739,7 @@ void MCP_CAN::mcp2515_initCANBuffers(void) {
 ** Function name:           mcp2515_init
 ** Descriptions:            init the device
 *********************************************************************************************************/
-byte MCP_CAN::mcp2515_init(const byte mode, const byte canSpeed, const byte clock) {
+byte MCP_CAN::mcp2515_init(const byte mode, const byte canSpeed, const byte clock, const byte opMode) {
 
     byte res;
 
@@ -786,8 +786,8 @@ byte MCP_CAN::mcp2515_init(const byte mode, const byte canSpeed, const byte cloc
                                MCP_RXB_RX_STDEXT);
         }
 
-        // enter normal mode
-        res = setMode(MCP_MODE_NORMAL);
+        // enter normal mode (default) or other user-specified mode (such as MCP_MODE_LISTENONLY)
+        res = setMode(opMode);
         if (res) {
             LOGI("Returning to Previous Mode Failure...");
             return res;
@@ -999,9 +999,9 @@ MCP_CAN::MCP_CAN(byte _CS, SPIClass &spi, int speed) :
 ** Function name:           begin
 ** Descriptions:            init can and set speed
 *********************************************************************************************************/
-byte MCP_CAN::begin(byte mode, byte speedset, const byte clockset) {
+byte MCP_CAN::begin(byte mode, byte speedset, const byte clockset, const byte opMode) {
     spi.begin(PIN_INVALID);
-    byte res = mcp2515_init(mode, speedset, clockset);
+    byte res = mcp2515_init(mode, speedset, clockset, opMode);
 
     return ((res == MCP2515_OK) ? CAN_OK : CAN_FAILINIT);
 }

@@ -17,6 +17,8 @@
 SYSTEM_THREAD(ENABLED);
 SYSTEM_MODE(SEMI_AUTOMATIC);
 
+#define LISTEN_ONLY               (0)
+
 #if PLATFORM_ID == PLATFORM_TRACKER
 
 #define CAN_SPI_INTERFACE         (SPI1)
@@ -81,12 +83,17 @@ bool can_init(uint8_t cs_pin, uint8_t int_pin, uint8_t speed, uint8_t clock)
     delay(50);
     digitalWrite(CAN_RST_PIN, HIGH);
 
+#if LISTEN_ONLY
+    if (CAN.begin(MCP_RX_ANY, speed, clock, MCP_MODE_LISTENONLY) != CAN_OK)
+#else
     if (CAN.begin(MCP_RX_ANY, speed, clock) != CAN_OK)
+#endif // LISTEN_ONLY
     {
         Log.error("CAN initial failed");
         return false;
     }
 
+#if !LISTEN_ONLY
     // Set NORMAL mode
     if(CAN.setMode(MCP_MODE_NORMAL) == MCP2515_OK) {
         Log.info("CAN mode set");
@@ -95,7 +102,7 @@ bool can_init(uint8_t cs_pin, uint8_t int_pin, uint8_t speed, uint8_t clock)
       Log.error("CAN mode fail");
       return false;
     }
-
+#endif // LISTEN_ONLY
 
     CAN.getCANStatus();
     pinMode(int_pin, INPUT);
@@ -148,6 +155,7 @@ void loop()
 {
     static uint8_t ret = CAN_FAIL;
     if(!is_sleep) {
+#if !LISTEN_ONLY
         // send data:  id = 0x00, standrad frame, data len = 8, stmp: data buf
         stmp[7] = stmp[7] + 1;
         if (stmp[7] == 100) {
@@ -166,6 +174,7 @@ void loop()
             Log.error("Failed CAN message");
         }
         delay(1000);                       // send data per 100ms
+#endif // LISTEN_ONLY
 
         if(!digitalRead(pin_int)) {
             ret = CAN.readMsgBufID(&msg.id, &msg.len, msg.data);
