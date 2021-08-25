@@ -99,7 +99,7 @@ class MCP_CAN {
     byte mcp2515_setCANCTRL_Mode(const byte newmode);           // set mode
     byte mcp2515_requestNewMode(const byte newmode);                  // Set mode
     byte mcp2515_configRate(const byte canSpeed, const byte clock);  // set baudrate
-    byte mcp2515_init(const byte mode, const byte canSpeed, const byte clock);   // mcp2515init
+    byte mcp2515_init(const byte mode, const byte canSpeed, const byte clock, const byte opMode = MCP_MODE_NORMAL);   // mcp2515init
 
     void mcp2515_write_id(const byte mcp_addr,                  // write can id
                           const byte ext,
@@ -133,7 +133,7 @@ class MCP_CAN {
         return MCP_N_TXBUFFERS - 1;    // read index of last tx buffer
     }
 
-    byte begin(byte mode, byte speedset, const byte clockset = MCP_16MHz); // init can
+    byte begin(byte mode, byte speedset, const byte clockset = MCP_16MHz, const byte opMode = MCP_MODE_NORMAL); // init can
     byte minimalInit(); // minimal init
     byte init_Mask(byte num, byte ext, unsigned long ulData);       // init Masks
     byte init_Filt(byte num, byte ext, unsigned long ulData);       // init filters
