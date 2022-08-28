@@ -191,7 +191,7 @@ bool MCP_CAN::mcp2515_isFastSupported(pin_t _pin)
     {
         return false;
     }
-    Hal_Pin_Type type = HAL_Pin_Map()[_pin].type;
+    Hal_Pin_Type type = Hal_Pin_Map()[_pin].type;
     return (type == HAL_PIN_TYPE_MCU);
 #else
     // Everthing IO is based from the MCU
