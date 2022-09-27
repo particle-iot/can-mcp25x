@@ -71,12 +71,7 @@ class MCP_CAN {
         mcp2515 driver function
     */
 
-  private:
-
-    void mcp2515_reset(void);                                   // reset mcp2515
-
-    bool mcp2515_isFastSupported(pin_t _pin);                   // get fast IO capabilities
-
+  protected:
     byte mcp2515_readRegister(const byte address);              // read mcp2515's register
 
     void mcp2515_readRegisterS(const byte address,
@@ -89,13 +84,18 @@ class MCP_CAN {
                               const byte values[],
                               const byte n);
 
-    void mcp2515_initCANBuffers(void);
-
     void mcp2515_modifyRegister(const byte address,             // set bit of one register
                                 const byte mask,
                                 const byte data);
 
     byte mcp2515_readStatus(void);                              // read mcp2515's Status
+    void mcp2515_initCANBuffers(void);
+
+  private:
+    void mcp2515_reset(void);                                   // reset mcp2515
+
+    bool mcp2515_isFastSupported(pin_t _pin);                   // get fast IO capabilities
+
     byte mcp2515_setCANCTRL_Mode(const byte newmode);           // set mode
     byte mcp2515_requestNewMode(const byte newmode);                  // Set mode
     byte mcp2515_configRate(const byte canSpeed, const byte clock);  // set baudrate
@@ -149,7 +149,7 @@ class MCP_CAN {
     byte readMsgBuf(byte* len, byte* buf);                          // read buf
     byte readMsgBufID(unsigned long* ID, byte* len, byte* buf);     // read buf with object ID
     byte checkReceive(void);                                        // if something received
-    byte checkError(void);                                          // if something error
+    byte checkError(uint8_t *eflg);                                 // if something error
     unsigned long getCanId(void);                                   // get can id when receive
     byte isRemoteRequest(void);                                     // get RR flag when receive
     byte isExtendedFrame(void);                                     // did we recieve 29bit frame?
