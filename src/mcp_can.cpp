@@ -55,14 +55,14 @@
 #define MCP2515_SELECT()   csSetter(SPICS, LOW)
 #define MCP2515_UNSELECT() csSetter(SPICS, HIGH)
 
-#if CAN_DEBUG_MODE
-    static  Logger local_log("mcp_can");
+// #if CAN_DEBUG_MODE
+    static  Logger local_log("app.mcp25625");
     #define LOGI   local_log.info
     #define LOGE   local_log.error
-#else
-    #define LOGI(...)
-    #define LOGE(...)
-#endif
+// #else
+//     #define LOGI(...)
+//     #define LOGE(...)
+// #endif
 
 /*********************************************************************************************************
 ** Function name:           txCtrlReg
@@ -321,8 +321,10 @@ void MCP_CAN::setSleepWakeup(const byte enable) {
 *********************************************************************************************************/
 byte MCP_CAN::sleep() {
     if (getMode() != MCP_MODE_SLEEP) {
+        LOGI("sleep(): Setting mode to MODE_SLEEP");
         return mcp2515_setCANCTRL_Mode(MCP_MODE_SLEEP);
     } else {
+        LOGI("sleep(): Already in MODE_SLEEP");
         return CAN_OK;
     }
 }
@@ -334,8 +336,10 @@ byte MCP_CAN::sleep() {
 byte MCP_CAN::wake() {
     byte currMode = getMode();
     if (currMode != mcpMode) {
+        LOGI("wake(): Need to wake");
         return mcp2515_setCANCTRL_Mode(mcpMode);
     } else {
+        LOGI("wake(): Already awake, ignoring");
         return CAN_OK;
     }
 }
@@ -367,7 +371,9 @@ byte MCP_CAN::getCANStatus()
 ** Descriptions:            Returns current control mode
 *********************************************************************************************************/
 byte MCP_CAN::getMode() {
-    return mcp2515_readRegister(MCP_CANSTAT) & MCP_MODE_MASK;
+    byte ret = mcp2515_readRegister(MCP_CANSTAT) & MCP_MODE_MASK;
+    LOGI("getMode(): MODE = 0x%02X", ret);
+    return ret;
 }
 
 /*********************************************************************************************************
@@ -379,8 +385,10 @@ byte MCP_CAN::mcp2515_setCANCTRL_Mode(const byte newmode) {
     // This is done by setting the wake up interrupt flag
     // This undocumented trick was found at https://github.com/mkleemann/can/blob/master/can_sleep_mcp2515.c
     if ((getMode()) == MCP_MODE_SLEEP && newmode != MCP_MODE_SLEEP) {
+        LOGI("setCANCTRL_Mode(): Asleep — need to awaken");
         // Make sure wake interrupt is enabled
         byte wakeIntEnabled = (mcp2515_readRegister(MCP_CANINTE) & MCP_WAKIF);
+        LOGI("setCANCTRL_Mode(): WAKIF = %u", wakeIntEnabled);
         if (!wakeIntEnabled) {
             mcp2515_modifyRegister(MCP_CANINTE, MCP_WAKIF, MCP_WAKIF);
         }
@@ -395,6 +403,7 @@ byte MCP_CAN::mcp2515_setCANCTRL_Mode(const byte newmode) {
         // In this situation the mode needs to be manually set to LISTENONLY.
 
         if (mcp2515_requestNewMode(MCP_MODE_LISTENONLY) != MCP2515_OK) {
+            LOGE("setCANCTRL_Mode(): failed to set mode to LISTENONLY");
             return MCP2515_FAIL;
         }
 
@@ -407,7 +416,13 @@ byte MCP_CAN::mcp2515_setCANCTRL_Mode(const byte newmode) {
     // Clear wake flag
     mcp2515_modifyRegister(MCP_CANINTF, MCP_WAKIF, 0);
 
-    return mcp2515_requestNewMode(newmode);
+    byte ret = mcp2515_requestNewMode(newmode);
+    if (ret != CAN_OK) {
+        LOGE("setCANCTRL_Mode(): requestNewMode(0x%02X) failed", newmode);
+    } else {
+        LOGI("setCANCTRL_Mode(): requestNewMode(0x%02X) OK", newmode);
+    }
+    return ret;
 }
 
 /*********************************************************************************************************
@@ -416,19 +431,29 @@ byte MCP_CAN::mcp2515_setCANCTRL_Mode(const byte newmode) {
 *********************************************************************************************************/
 byte MCP_CAN::mcp2515_requestNewMode(const byte newmode) {
     unsigned long startTime = millis();
+    unsigned int retries = 0;
 
     // Spam new mode request and wait for the operation  to complete
     while (1) {
         // Request new mode
         // This is inside the loop as sometimes requesting the new mode once doesn't work (usually when attempting to sleep)
+        // 👆 is this really true??
         mcp2515_modifyRegister(MCP_CANCTRL, MCP_MODE_MASK, newmode);
+        delay(1);
 
-        byte statReg = mcp2515_readRegister(MCP_CANSTAT);
-        if ((statReg & MCP_MODE_MASK) == newmode) { // We're now in the new mode
-            return MCP2515_OK;
-        } else if ((millis() - startTime) > 200) { // Wait no more than 200ms for the operation to complete
-            return MCP2515_FAIL;
+        for (int i = 0; i < 10; i++) {
+            // Read back if mode selection was successful
+            byte statReg = mcp2515_readRegister(MCP_CANSTAT);
+            if ((statReg & MCP_MODE_MASK) == newmode) { // We're now in the new mode
+                LOGI("requestNewMode(0x%02X) OK, CANSTAT=0x%02X (%u retries)", newmode, statReg & MCP_MODE_MASK, retries);
+                return MCP2515_OK;
+            } else if ((millis() - startTime) > 200) { // Wait no more than 200ms for the operation to complete
+                LOGI("requestNewMode(0x%02X) FAILED, CANSTAT=0x%02X (%u retries)", newmode, statReg & MCP_MODE_MASK, retries);
+                return MCP2515_FAIL;
+            }
+            retries++;
         }
+        // TODO: add delay here?
     }
 }
 
@@ -947,6 +972,7 @@ byte MCP_CAN::mcp2515_isTXBufFree(byte* txbuf_n, byte iBuf) {         /* get Nex
 
     if (iBuf >= MCP_N_TXBUFFERS ||
             (mcp2515_readStatus() & txStatusPendingFlag(iBuf)) != 0) {
+        LOGE("All TX buffers full");
         return MCP_ALLTXBUSY;
     }
 
@@ -1171,7 +1197,7 @@ byte MCP_CAN::trySendMsgBuf(unsigned long id, byte ext, byte rtrBit, byte len, c
     }
 
     mcp2515_write_canMsg(txbuf_n, id, ext, rtrBit, len, buf);
-
+    LOGI("%u bytes sent to 0x%08lX OK (tx buffer=0x%02X)", len, id, txbuf_n);
     return CAN_OK;
 }
 
@@ -1188,6 +1214,9 @@ byte MCP_CAN::sendMsg(unsigned long id, byte ext, byte rtrBit, byte len, const b
     do {
         res = mcp2515_getNextFreeTXBuf(&txbuf_n);                       /* info = addr.                 */
         uiTimeOut++;
+        if (res == MCP_ALLTXBUSY) {
+            delay(1);
+        }
     } while (res == MCP_ALLTXBUSY && (uiTimeOut < TIMEOUTVALUE));
 
     if(uiTimeOut == TIMEOUTVALUE)
@@ -1196,6 +1225,7 @@ byte MCP_CAN::sendMsg(unsigned long id, byte ext, byte rtrBit, byte len, const b
     }
     else
     {
+        LOGI("sendMsg(): Using TX buffer @ 0x%02X (%u retries)", txbuf_n, uiTimeOut);
         uiTimeOut = 0;
         mcp2515_write_canMsg(txbuf_n, id, ext, rtrBit, len, buf);
         mcp2515_modifyRegister( txbuf_n-1 , MCP_TXB_TXREQ_M, MCP_TXB_TXREQ_M );
@@ -1204,11 +1234,17 @@ byte MCP_CAN::sendMsg(unsigned long id, byte ext, byte rtrBit, byte len, const b
         {
             uiTimeOut++;
             res1 = mcp2515_readRegister(txbuf_n-1);                         /* read send buff ctrl reg  */
-            res1 = res1 & 0x08;
+            res1 = res1 & MCP_TXB_TXREQ_M;
+            if (res1) {
+                delay(1);
+            }
         } while (res1 && (uiTimeOut < TIMEOUTVALUE));
 
         if(uiTimeOut == TIMEOUTVALUE)                                       /* send msg timeout             */
         {
+            LOGE("sendMsg(): Timeout {buffer: 0x%02X, ABTF: %u, MLOA: %u, TXERR: %u}", 
+                txbuf_n, res1 & 0x40, res1 & 0x20, res1 & 0x10
+            );
             rtv = CAN_SENDMSGTIMEOUT;
         }
     }

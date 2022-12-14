@@ -52,7 +52,7 @@
 #include <inttypes.h>
 
 // if print debug information
-#define CAN_DEBUG_MODE 0
+#define CAN_DEBUG_MODE 1
 
 // Begin mt
 
