@@ -327,6 +327,11 @@ void MCP_CAN::setSleepWakeup(const byte enable) {
 *********************************************************************************************************/
 byte MCP_CAN::sleep() {
     if (getMode() != MCP_MODE_SLEEP) {
+        if (mcp2515_readRegister(MCP_TXB0CTRL) & MCP_TXB_TXREQ_M
+            || mcp2515_readRegister(MCP_TXB1CTRL) & MCP_TXB_TXREQ_M
+            || mcp2515_readRegister(MCP_TXB2CTRL) & MCP_TXB_TXREQ_M) {
+            mcp2515_modifyRegister(MCP_CANCTRL, MCP_ABORT_TX, MCP_ABORT_TX); // abort all TX queues
+        }
         return mcp2515_setCANCTRL_Mode(MCP_MODE_SLEEP);
     } else {
         return CAN_OK;
