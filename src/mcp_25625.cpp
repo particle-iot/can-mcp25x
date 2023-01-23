@@ -8,11 +8,7 @@ MCP_CAN_25625::MCP_CAN_25625(pin_t cs, pin_t standby, SPIClass &spi, int speed)
 
 void MCP_CAN_25625::setStandby(bool value)
 {
-	if (value) {
-		digitalWrite(standby, HIGH);
-	} else {
-		digitalWrite(standby, LOW);
-	}
+	digitalWrite(standby, value ? HIGH : LOW);
 }
 
 byte MCP_CAN_25625::sleep()
